@@ -204,5 +204,3 @@ The code and package provided in this repository is provided "as is" and without
 
 Please use this code and package at your own risk. The author and contributors disclaim all liability and responsibility for any errors or issues that may arise from its use. It is your responsibility to test and validate the code and package for your particular use case.
 <!-- updated: 2025-11-24-r01 -->
-
-
