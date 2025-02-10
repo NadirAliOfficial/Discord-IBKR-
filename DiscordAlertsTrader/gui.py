@@ -46,7 +46,7 @@ def match_authors(author_str:str)->str:
         at = pd.read_csv(op.join(cfg['general']['data_dir'] , f"{chn}_message_history.csv"))["Author"].unique()
         authors.extend(at)
     authors = list(dict.fromkeys(authors))
-    
+
     authors += cfg['discord']['authors_subscribed'].split(',')
     authors = [a for a in authors if author_str.lower() in a.lower()]
     if len(authors) == 0:
@@ -74,7 +74,7 @@ def split_alert_message(gui_msg):
         splt = gui_msg.split(':')
         author = splt[0]
         msg = ":".join(splt[1:])
-        
+
     # no colon or coma
     else:
         print("No colon or coma in message, author not found, assuming no author")
@@ -84,21 +84,21 @@ def split_alert_message(gui_msg):
 
 def get_live_quotes(symbol, tracker, max_delay=2):
     dir_quotes = cfg['general']['data_dir'] + '/live_quotes'
-    
+
     fquote = f"{dir_quotes}/{symbol}.csv"
     if not op.exists(fquote):
         quote = tracker.price_now(symbol, "both")
         if quote is None:
-            return None, None        
+            return None, None
         return quote
-    
+
     with open(fquote, "r") as f:
         quotes = f.readlines()
-    
+
     now = time.time()
     get_live = False
     try:
-        tmp = quotes[-1].split(',') # in s  
+        tmp = quotes[-1].split(',') # in s
         if len(tmp) == 3:
             timestamp, ask, bid = tmp
         else:
@@ -109,16 +109,16 @@ def get_live_quotes(symbol, tracker, max_delay=2):
     except:
         print("Error reading quote", symbol, quotes[-1])
         get_live = True
-    
+
     timestamp = eval(timestamp)
     if max_delay is not None:
         if now - timestamp > max_delay:
             get_live = True
-    
+
     if get_live:
         quote = tracker.price_now(symbol, "both")
         if quote is None:
-            return None, None        
+            return None, None
         return quote
     return quote
 
@@ -168,11 +168,11 @@ msg_tab = [[sg.TabGroup([[sg.Tab(c, h) for c, h in zip(chns, ly_chns)],
                         ], title_color='black')]]
 layout = [[sg.TabGroup([
                         [sg.Tab("Msgs Subs", ly_cons_subs, font=fnt_b)],
-                        [sg.Tab("Msgs All", ly_cons, font=fnt_b)], 
+                        [sg.Tab("Msgs All", ly_cons, font=fnt_b)],
                         [sg.Tab('Portfolio', ly_port)],
                         [sg.Tab('Analysts Portfolio', ly_track)],
                         [sg.Tab('Analysts Stats', ly_stats)],
-                        [sg.Tab('Msg History',msg_tab)],                        
+                        [sg.Tab('Msg History',msg_tab)],
                         [sg.Tab("Account", ly_accnt)],
                         [sg.Tab("Config", ly_conf)]
                         ], title_color='black', font=fnt_b)],
@@ -206,7 +206,7 @@ def update_portfolios_thread(window):
     while True:
         time.sleep(60)
         window["_upd-portfolio_"].click()
-        time.sleep(2)  
+        time.sleep(2)
         window["_upd-track_"].click()
 print(5)
 event, values = window.read(.1)
@@ -262,12 +262,12 @@ window.Element('_stat_').Update(values=dt)
 fit_table_elms(window.Element("_stat_").Widget)
 
 
-def run_gui():  
+def run_gui():
     subs_auth_msg = False
     auth_subs = cfg['discord']['authors_subscribed'].split(',')
     auth_subs = [i.split("#")[0].strip() for i in auth_subs]
     ori_color = 'black'
-    while True: 
+    while True:
         event, values = window.read(1)#.1)
 
         if event == sg.WINDOW_CLOSED:
@@ -275,19 +275,19 @@ def run_gui():
 
         # Prefill trigger alert message
         if ('_portfolio_' in event and values['_portfolio_'] != []) or \
-            ('_track_' in event and values['_track_'] != []):  
+            ('_track_' in event and values['_track_'] != []):
             if '_portfolio_' in event:
-                pix = values['_portfolio_'][0] 
+                pix = values['_portfolio_'][0]
                 dt, hdr = gg.get_portf_data(port_exc, **values)
                 qty = dt[pix][hdr.index('filledQty')]
             else:
                 pix = values['_track_'][0]
                 dt, hdr = gg.get_tracker_data(track_exc, **values)
-                qty = dt[pix][hdr.index('Qty')]  
-            qty = qty if qty == "" else int(qty)            
+                qty = dt[pix][hdr.index('Qty')]
+            qty = qty if qty == "" else int(qty)
             symb = dt[pix][hdr.index('Symbol')]
             auth = match_authors(dt[pix][hdr.index('Trader')])
-            
+
             price = ""
             if "Live" in hdr:
                 price = dt[pix][hdr.index('Live')]
@@ -306,7 +306,7 @@ def run_gui():
             price = price if price == "" else float(price)
             if "_" in symb:
                 # option
-                exp = r"(\w+)_(\d{6})([CP])([\d.]+)"        
+                exp = r"(\w+)_(\d{6})([CP])([\d.]+)"
                 match = re.search(exp, symb, re.IGNORECASE)
                 if match:
                     symbol, date, type, strike = match.groups()
@@ -319,20 +319,20 @@ def run_gui():
             state = window[event].GetText()
             butts = ['-alert_to-', '-alert_BTO', '-alert_STC', '-alert_STO', '-alert_BTC', '-alert_exitupdate', '-alert_quotes']
             if state == '▲':
-                window[event].update(text='▼')            
+                window[event].update(text='▼')
             else:
                 window[event].update(text='▲')
             for el in butts:
                 window[el].update(visible=state == '▲')
-                
+
         elif event.startswith('-alert_' ):
             print(event)
             ori_col = window.Element(event).ButtonColor
             window.Element(event).Update(button_color=("black", "white"))
-            window.refresh()            
+            window.refresh()
 
             action = event.split('_')[1]
-            
+
             msg_split = split_alert_message(values['-subm-msg'])
             if len(msg_split) == 2:
                 author, alert = msg_split
@@ -342,14 +342,14 @@ def run_gui():
             if "@" not in alert:
                 alert += " @0.01"
             if  not len([p for p in ["BTO", "STO", "BTC", "STC"] if p in alert]):
-                alert = "BTO " + alert                
+                alert = "BTO " + alert
             alert = alert.replace("@None", "@0.01").replace("@m", "@0.01")
             _, order = parse_trade_alert(alert)
 
             if order is None:
                 window.Element(event).Update(button_color=ori_col)
                 continue
-            
+
             ask, bid = get_live_quotes(order['Symbol'], alistner.tracker)
             if action in ["BTO", "BTC"] or order['action'] in ["BTO", "BTC"]:
                 price = ask
@@ -362,15 +362,15 @@ def run_gui():
             symbol = ordersymb_to_str(order['Symbol'])
             if action =='exitupdate':
                 msg =  f"{author}, Exit Update {symbol} PT 50% SL 50%"
-            elif action == 'quotes': 
+            elif action == 'quotes':
                 action_msg = order['action'].replace('ExitUpdate', "BTO")
-                msg =  f"{author}, {action_msg} {order.get('Qty', 1)} {symbol} @{price} | [ask {ask} bid {bid}]" 
+                msg =  f"{author}, {action_msg} {order.get('Qty', 1)} {symbol} @{price} | [ask {ask} bid {bid}]"
             else:
-                msg =  f"{author}, {action} {order.get('Qty', 1)} {symbol} @{price}" 
-                
+                msg =  f"{author}, {action} {order.get('Qty', 1)} {symbol} @{price}"
+
             window.Element("-subm-msg").Update(value=msg)
             window.Element(event).Update(button_color=ori_col)
-            
+
         elif event == "_upd-portfolio_": # update button in portfolio
             ori_col = window.Element(event).ButtonColor
             window.Element(event).Update(button_color=("black", "white"))
@@ -385,7 +385,7 @@ def run_gui():
             font_string += str(int(values['-slider-']))
             # window.Element('_portfolio_').Update(font=font_string)
             sg.SetOptions(font=(font_string))
-            
+
         elif event == "cfg_button":
             ori_col = window.Element(event).ButtonColor
             window.Element(event).Update(button_color=("black", "white"))
@@ -412,7 +412,7 @@ def run_gui():
                 if cur_color != "red":
                     ori_color = cur_color
                 window.Element(event).Update(text_color="red")
-            
+
         elif event == "_upd-track_": # update button in analyst alerts
             ori_col = window.Element(event).ButtonColor
             window.Element(event).Update(button_color=("black", "white"))
@@ -480,8 +480,8 @@ def run_gui():
         elif event == "-subm-alert":
             ori_col = window.Element(event).ButtonColor
             window.Element(event).Update(button_color=("black", "white"))
-            window.refresh()    
-            try:        
+            window.refresh()
+            try:
                 author,msg = split_alert_message(values['-subm-msg'])
                 author = match_authors(author.strip())
                 msg = msg.strip().replace("SPXW", "SPX")
@@ -491,7 +491,7 @@ def run_gui():
                 new_msg = pd.Series({
                     'AuthorID': None,
                     'Author': author,
-                    'Date': date, 
+                    'Date': date,
                     'Content': msg,
                     'Channel': chan
                     })
@@ -518,7 +518,7 @@ def run_gui():
                     subs_auth_msg = True
                 else:
                     subs_auth_msg = False
-            
+
             mprint_queue(event_feedb, subs_auth_msg)
         except queue.Empty:
             pass
@@ -534,7 +534,7 @@ def run_client():
     alistner.run(cfg['discord']['discord_token'])
 
 
-def gui():   
+def gui():
     client_thread = threading.Thread(target=run_client, daemon=True)
 
     # start the threads
