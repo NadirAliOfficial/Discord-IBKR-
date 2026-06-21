@@ -4,7 +4,7 @@ from pkg_resources import parse_requirements
 
 
 # Read requirements from requirements.txt
-with open('requirements.txt') as f:
+with open('requirements.txt', encoding="utf-8") as f:
     requirements = [str(req) for req in parse_requirements(f)]
 
 # get the version
@@ -22,7 +22,7 @@ setup(
     author_email='adonays.nunes@gmail.com',
     description='Package for automating discord trade alerts in TDA or eTrade.',
     license='BSD (3-clause)',
-    long_description=open('README.md').read(),
+    long_description=open('README.md', encoding="utf-8").read(),
     long_description_content_type='text/markdown',
     url='',
     download_url='https://github.com/AdoNunes/DiscordAlertsTrader',
