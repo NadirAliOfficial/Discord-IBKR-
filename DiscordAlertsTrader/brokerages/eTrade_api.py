@@ -51,7 +51,7 @@ class eTrade(BaseBroker):
         for ix in range(5):
             try:
                 return self._get_session()
-            except:
+            except Exception:
                 print(ix,"Could not get session, trying again")
                 time.sleep(1)
         raise Exception("Could not get session")
@@ -62,7 +62,7 @@ class eTrade(BaseBroker):
             try:
                 request_token = oauth.get_access_token(verifier_code)
                 return request_token                
-            except:
+            except Exception:
                 print(f"Could not get token, trying again {ix}/3")
                 time.sleep(1)
         raise Exception("Could not get token")
@@ -93,7 +93,7 @@ class eTrade(BaseBroker):
                 self.tokens = json.load(f)   
             try:
                 return sessions()  
-            except:
+            except Exception:
                 print("Loaded tokens expired, requesting new tokens")
                 os.remove(self.token_fname)  
         
@@ -159,7 +159,7 @@ class eTrade(BaseBroker):
         
         try:
             data = self.account_session.get_account_portfolio(self.accountIdKey, resp_format='json')
-        except:
+        except Exception:
             return acc_inf    
         # Handle and parse response
         if data is not None and "PortfolioResponse" in data and "AccountPortfolio" in data["PortfolioResponse"]:
@@ -188,7 +188,7 @@ class eTrade(BaseBroker):
     def get_positions_orders(self):
         try:
             acc_inf = self.get_account_info()
-        except:
+        except Exception:
             print("Could not get account info")
             return [], []
         df_pos = pd.DataFrame(columns=["symbol", "asset", "type", "Qty", "Avg Price", "PnL", "PnL %"])
