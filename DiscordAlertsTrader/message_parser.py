@@ -79,7 +79,7 @@ def parse_trade_alert(msg, asset=None):
                 order, pars = make_order_exits(order, msg, pars, asset_type)
                 order["n_PTs"] = n_pts
                 order["PTs_Qty"] = pts_qty
-            except:
+            except Exception:
                 order["PT1"] =  None
                 order["PT2"] = None
                 order["PT3"] = None
