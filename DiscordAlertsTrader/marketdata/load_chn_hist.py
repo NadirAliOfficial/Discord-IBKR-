@@ -256,7 +256,7 @@ for ix, row in msg_hist.loc[ix:].iterrows():  # .loc[ix:].iterrows(): #
     try:
         resp = tracker.trade_alert(order, live_alert=False, channel=author)
         tracker.portfolio.loc[(tracker.portfolio['Symbol'] == order['Symbol']) & (tracker.portfolio['isOpen']==1), 'bid'] = order['price_actual_bid']
-    except:
+    except Exception:
         print("No date match for", order["Symbol"], order["Date"])
         continue
 
