@@ -74,7 +74,7 @@ def calculate_weighted_mean(row, sufix="Price"):
     if np.any(valid_indices):
         try:
             return np.average(prices[valid_indices], weights=uqtys[valid_indices])
-        except:
+        except Exception:
             return np.average(prices[valid_indices])
     else:
         return np.nan
@@ -88,10 +88,10 @@ def get_portf_data(exclude={}, port_filt_author='', port_filt_date_frm='',
         return [],[]
     try:
         data = pd.read_csv(fname_port,sep=",")
-    except:
+    except Exception:
         try:
             data = pd.read_csv(fname_port,sep=",")
-        except:
+        except Exception:
             return [],[] 
     try:
         data = filter_data(data, exclude, 
@@ -193,7 +193,7 @@ def get_tracker_data(exclude={}, track_filt_author='', track_filt_date_frm='',
         
     try:
         data = pd.read_csv(fname_port, sep=",")
-    except:
+    except Exception:
         return [[]],[] 
 
     try:
@@ -229,7 +229,7 @@ def get_tracker_data(exclude={}, track_filt_author='', track_filt_date_frm='',
         max_margin = eval(cfg['shorting']['margin_capital'])
         try:
             data['Margin'] = data.apply(lambda x: 100*x['Price-actual'] *(max_margin/(20*x['underlying'])),axis=1)
-        except:
+        except Exception:
             data['Margin'] = 0
     else:
         data['Margin'] = 0
@@ -376,7 +376,7 @@ def get_live_quotes(portfolio, trader_port=False):
             quotes_sym[sym] = {"ask": float(quote_lst[2].replace('\n', '').replace(' ', '')),
                                "bid":float(quote_lst[1].replace('\n', '').replace(' ', ''))
                                }
-        except:
+        except Exception:
             continue
             
     for sym in quotes_sym:
