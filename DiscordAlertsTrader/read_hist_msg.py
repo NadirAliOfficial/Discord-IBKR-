@@ -49,7 +49,7 @@ def rough_formatting(message):
     alert = message['content']
     if message['content'] is None:
         return ""
-    
+
     pattern = r'\b(BTO)?\b(\d{1,2}\/\d{1,2})?\s*([A-Z]+)\s*(\d+[.\d+]*[c|p|C|P])\s*@\s*(\d+(?:[.]\d+)?|\.\d+)'
     match = re.search(pattern, alert, re.IGNORECASE)
     if match:
