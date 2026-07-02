@@ -100,7 +100,7 @@ class eTrade(BaseBroker):
         # if tokens not valid, get new ones
         oauth = pyetrade.ETradeOAuth(self.consumer_key, self.consumer_secret)
         if cfg['etrade'].getboolean('WITH_BROWSER'):
-            webbrowser.open(oauth.get_request_token())
+            webbrowser.open(oauth.get_request_token(, encoding="utf-8"))
         else:
             print("Please open the following URL in your browser:")
             print(oauth.get_request_token())
