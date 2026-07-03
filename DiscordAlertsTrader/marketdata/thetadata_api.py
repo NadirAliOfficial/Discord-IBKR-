@@ -125,7 +125,7 @@ class ThetaClientAPI:
 
         if fetch_data:
             print(f"{Fore.YELLOW} Fetching data from thetadata for {symbol}: {date_s} to {date_e}")
-            url = f'http://127.0.0.1:25510/v2/hist/option/greeks?exp={expdate}&right={right}&strike={strike}&start_date={date_s}&end_date={date_e}&use_csv=true&root={root}&rth=true&ivl={interval_size}' 
+            url = f'http://127.0.0.1:25510/v2/hist/option/greeks?exp={expdate}&right={right}&strike={strike}&start_date={date_s}&end_date={date_e}&use_csv=true&root={root}&rth=true&ivl={interval_size}'
             header ={'Accept': 'application/json'}
             response = requests.get(url, headers=header)
             if response.content.startswith(b'No data for'):
@@ -134,13 +134,13 @@ class ThetaClientAPI:
             df_q['timestamp'] = df_q.apply(get_timestamp_, axis=1)
             if not get_trades:
                 return df_q
-            
+
             trades = self.get_hist_trades( symbol, date_range, interval_size)
             merged_df = pd.merge(trades[['timestamp', 'last', 'volume']], df_q, on='timestamp', how='right')
             data = merged_df[['timestamp', 'bid', 'ask', 'last', 'volume', 'delta', 'theta',
                             'vega', 'lambda', 'implied_vol', 'underlying_price']]
             save_or_append_quote(data, symbol, self.dir_quotes)
-        
+
         return data
 
     def get_delta_strike(self, ticker: str, exp_date: str, delta:float, right:str, timestamp:int, stock_price = None):
@@ -164,19 +164,19 @@ class ThetaClientAPI:
         _type_
             _description_
         """
-        
+
         url = f"http://127.0.0.1:25510/v2/list/strikes?root={ticker}&exp={exp_date}"
         header ={'Accept': 'application/json'}
         response = requests.get(url, headers=header)
         if response.content.startswith(b'No data for'):
             return None
-        
+
         # get strikes, use underlying stock price if not available
         strikes = response.json()['response']
         if stock_price is None:
             mid = round(len(strikes)/2)
         else:
-            mid = np.argmin([abs(s - stock_price*1000) for s in strikes])  
+            mid = np.argmin([abs(s - stock_price*1000) for s in strikes])
         st_done = []
         st_info = []
         cnt = 0
@@ -185,7 +185,7 @@ class ThetaClientAPI:
             # date to ny time
             dt = datetime.fromtimestamp(timestamp, tz=pytz.utc).astimezone(pytz.timezone('America/New_York'))
             date_s = dt.date().strftime("%Y%m%d")
-            url = f'http://127.0.0.1:25510/v2/hist/option/greeks?exp={exp_date}&right={right}&strike={strike}&start_date={date_s}&end_date={date_s}&use_csv=true&root={ticker}&rth=true&ivl=1000' 
+            url = f'http://127.0.0.1:25510/v2/hist/option/greeks?exp={exp_date}&right={right}&strike={strike}&start_date={date_s}&end_date={date_s}&use_csv=true&root={ticker}&rth=true&ivl=1000'
             header ={'Accept': 'application/json'}
             print('getting delta for strike', strike)
             response = requests.get(url, headers=header)
@@ -196,7 +196,7 @@ class ThetaClientAPI:
                     return None, None
                 continue
             df_q = pd.read_csv(io.StringIO(response.content.decode('utf-8')))
-            
+
             # delete zeros bid-ask, geeks are wrong
             df_q = df_q[ (df_q['ask']!=0)].reset_index(drop=True)
             if not len(df_q):
@@ -207,10 +207,10 @@ class ThetaClientAPI:
                     return None, None
                 continue
             # get geeks at time
-            ms_of_day = (dt.hour*3600 + dt.minute*60 + dt.second)* 1000 
+            ms_of_day = (dt.hour*3600 + dt.minute*60 + dt.second)* 1000
             ix_g = np.argmin(abs(df_q['ms_of_day'] - ms_of_day))
             this_delta = df_q.iloc[ix_g]['delta']
-            
+
             print("delta", this_delta, strike)
             if abs(abs(this_delta) - delta) < 0.1:
                 break
@@ -221,7 +221,7 @@ class ThetaClientAPI:
             else:
                 sss
             if strike in st_done:
-                
+
                 st_done.append(strike)
                 st_info.append((strike, this_delta))
                 inx_closer = np.argmin([abs(s[1] - delta) for s in st_info])
@@ -230,7 +230,7 @@ class ThetaClientAPI:
                 break
             st_done.append(strike)
             st_info.append((strike, this_delta))
-        
+
         exp_date_f = datetime.strptime(exp_date, "%Y%m%d").strftime("%m%d%y")
         return f"{ticker}_{exp_date_f}{right}{strike/1000}".replace(".0", ""), this_delta
 
