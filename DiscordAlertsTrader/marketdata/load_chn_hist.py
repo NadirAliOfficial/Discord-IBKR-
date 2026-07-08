@@ -207,7 +207,7 @@ for ix, row in msg_hist.loc[ix:].iterrows():  # .loc[ix:].iterrows(): #
     except ValueError:
         print("Incorrect date format", full_date, dt_fm)
         continue
-        
+
     if datetime.strptime(full_date, dt_fm).date() < dt.date():
         print("Order date in the past, skipping", order["expDate"], order["Date"])
         resp = tracker.trade_alert(order, live_alert=False, channel=author)
