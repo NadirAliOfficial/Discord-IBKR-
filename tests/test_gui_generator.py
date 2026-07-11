@@ -11,7 +11,7 @@ class TestConfigurator(unittest.TestCase):
 
     def test_get_stats_data(self):
         fname_port="test_tracker_portfolio.csv"
-        
+
         # make dummy portfolio
         cols = cfg["col_names"]["tracker_portfolio"]
         dt = "2023-05-15 10:02:47.409000,NFLX_051923C345,test#3069,chan,0,option,BTO,10,5,12,,,,,,,,,,,,,2023-05-16 12:39:37.884000,".split(',')
@@ -26,18 +26,18 @@ class TestConfigurator(unittest.TestCase):
         for k, v in stc_info.items():
             port.loc[0,k] = v
         port.to_csv(fname_port, index=False)
-        
+
         data, _ = get_stats_data(exclude={}, stat_filt_author='', stat_filt_date_frm='',
-                    stat_filt_date_to='', stat_filt_sym='', 
+                    stat_filt_date_to='', stat_filt_sym='',
                     stat_max_trade_cap='', stat_max_qty='', trail_stop_perc='',
                     fname_port=fname_port)
         self.assertTrue(data[0][1:] == data[1][1:])
-    
+
         data, h = get_stats_data(exclude={}, stat_filt_author='', stat_filt_date_frm='',
-                    stat_filt_date_to='', stat_filt_sym='', 
+                    stat_filt_date_to='', stat_filt_sym='',
                     stat_max_trade_cap='', stat_max_qty='1', trail_stop_perc='',
                     fname_port=fname_port)
-        
+
         expected = [
             ['Trader', 'test'],
             ['PnL$', '200'],
