@@ -78,7 +78,7 @@ class TestMessageParser(unittest.TestCase):
 
         for msg, exp in zip(msgs,expect):
             self.assertEqual(parse_trade_alert(msg), exp)
-        
-    
+
+
 if __name__ == '__main__':
     unittest.main()
