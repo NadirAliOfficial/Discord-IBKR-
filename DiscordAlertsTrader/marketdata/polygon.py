@@ -1,7 +1,7 @@
 import requests
 import pytz
 from datetime import datetime
-import pandas as pd 
+import pandas as pd
 from DiscordAlertsTrader.configurator import cfg
 
 def get_poly_data_rest(asset, start, end, range):
@@ -29,7 +29,7 @@ def get_poly_data(asset, start, end, range, ask='h', bid = 'l', asset_type='O'):
     ask : str : ask column name (h for high), if None will return all fields
     bid : str : bid column name (l for low)
     asset_type: str : asset type, O for option S for stock
-    
+
     c The close price for the symbol in the given time period.
     h The highest price for the symbol in the given time period.
     l The lowest price for the symbol in the given time period.
@@ -45,11 +45,11 @@ def get_poly_data(asset, start, end, range, ask='h', bid = 'l', asset_type='O'):
     elif asset_type == 'S':
         symbol = asset
     res = get_poly_data_rest(symbol, start, end, range)
-    
+
     df = pd.DataFrame(res['results'])
     if ask is None:
         return df
-    
+
     df['ask'] = df[ask]
     df['bid'] = df[bid]
     df['timestamp'] = df['t']
@@ -57,7 +57,7 @@ def get_poly_data(asset, start, end, range, ask='h', bid = 'l', asset_type='O'):
     return df
 
 
-def format_strike(strike):    
+def format_strike(strike):
     strike_r = f"{strike}".split(".")[0]
     strike_r = f"{strike_r:0>5}"
     if "." in str(strike):
