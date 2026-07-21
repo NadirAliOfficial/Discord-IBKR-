@@ -39,9 +39,9 @@ def split_strip(string):
     return lstr
 
 class DiscordBot(discord.Client):
-    def __init__(self, 
-                 queue_prints=dummy_queue(maxsize=10), 
-                 live_quotes=True, 
+    def __init__(self,
+                 queue_prints=dummy_queue(maxsize=10),
+                 live_quotes=True,
                  brokerage=None,
                  tracker_portfolio_fname=cfg['portfolio_names']["tracker_portfolio_name"],
                  cfg = cfg):
@@ -53,12 +53,12 @@ class DiscordBot(discord.Client):
         self.live_quotes = live_quotes
         self.cfg = cfg
         if brokerage is not None:
-            self.trader = AlertsTrader(queue_prints=self.queue_prints, brokerage=brokerage, cfg=self.cfg)       
+            self.trader = AlertsTrader(queue_prints=self.queue_prints, brokerage=brokerage, cfg=self.cfg)
         self.tracker = AlertsTracker(brokerage=brokerage, portfolio_fname=tracker_portfolio_fname, cfg=self.cfg)
-        self.load_data()        
+        self.load_data()
 
         if (live_quotes and brokerage is not None and brokerage.name != 'webull') \
-            or (brokerage is not None and brokerage.name == 'webull' and 
+            or (brokerage is not None and brokerage.name == 'webull' and
                 cfg['general'].getboolean('webull_live_quotes')):
             self.thread_liveq =  threading.Thread(target=self.track_live_quotes)
             self.thread_liveq.start()
@@ -77,20 +77,20 @@ class DiscordBot(discord.Client):
             now = datetime.now()
             weekday, hour = now.weekday(), now.hour
             after_hr, before_hr = self.cfg['general']['off_hours'].split(",")
-            if  weekday >= 5 or (hour < int(before_hr) or hour >= int(after_hr)):  
+            if  weekday >= 5 or (hour < int(before_hr) or hour >= int(after_hr)):
                 time.sleep(60)
                 continue
 
             # get unique symbols  from portfolios, either options or all, open or alerted today
             tk_day = pd.to_datetime(self.tracker.portfolio['Date']).dt.date == date.today()
             td_day = pd.to_datetime(self.trader.portfolio['Date']).dt.date == date.today()
-            msk_tk = ((self.tracker.portfolio['isOpen']==1) | tk_day) 
-            msk_td = ((self.trader.portfolio['isOpen']==1) | td_day) 
-            
+            msk_tk = ((self.tracker.portfolio['isOpen']==1) | tk_day)
+            msk_td = ((self.trader.portfolio['isOpen']==1) | td_day)
+
             if self.cfg['general'].getboolean('live_quotes_options_only'):
                 msk_tk = msk_tk & (self.tracker.portfolio['Asset']=='option')
                 msk_td = msk_td & (self.trader.portfolio['Asset']=='option')
-            
+
             track_symb = set(self.tracker.portfolio.loc[msk_tk, 'Symbol'].to_list() + \
                 self.trader.portfolio.loc[msk_td, 'Symbol'].to_list())
             if not len(track_symb):
@@ -104,8 +104,8 @@ class DiscordBot(discord.Client):
                 continue
             if quote is None:
                 continue
-            
-            for q in quote: 
+
+            for q in quote:
                 if quote[q]['description'] == 'Symbol not found' or q =='' or quote[q]['bidPrice'] == 0:
                     continue
                 timestamp = quote[q]['quoteTimeInLong']//1000  # in ms
@@ -120,18 +120,18 @@ class DiscordBot(discord.Client):
                         lines = f.readlines()
                         if lines:
                             last_line = lines[-1].strip()
-                
+
                 #if last recorded timestamp is the same as current, skip
                 if last_line.split(",")[0] == str(timestamp):
                     continue
-                
+
                 # Write the new line to the file
                 with open(file_path, "a+") as f:
                     if do_header:
                         f.write(f"timestamp, quote, quote_ask\n")
                     f.write(f"{timestamp}, {quote[q]['bidPrice']}, {quote[q]['askPrice']}\n")
-            
-            # Sleep for up to X secs    
+
+            # Sleep for up to X secs
             toc = (datetime.now() - now).total_seconds()
             if toc < float(cfg['general']['sampling_rate_quotes']) and self.live_quotes:
                 time.sleep(float(cfg['general']['sampling_rate_quotes'])-toc)
@@ -152,18 +152,18 @@ class DiscordBot(discord.Client):
             self.chn_hist[ch]= ch_dt
 
     async def on_ready(self):
-        print('Logged on as', self.user , '\n loading previous messages')        
+        print('Logged on as', self.user , '\n loading previous messages')
         await self.load_previous_msgs()
-    
+
     async def on_message(self, message):
         # only respond to channels in config or authorwise subscription
-        author = f"{message.author.name}#{message.author.discriminator}".replace("#0", "")   
+        author = f"{message.author.name}#{message.author.discriminator}".replace("#0", "")
         if message.channel.id not in self.channel_IDS.values() and \
             author.lower() not in split_strip(self.cfg['discord']['auhtorwise_subscription']):
             return
         if message.content == 'ping':
             await message.channel.send('pong')
-        
+
         message = server_formatting(message)
         if custom:
             await msg_custom_formated2(message)
@@ -172,7 +172,7 @@ class DiscordBot(discord.Client):
                 for msg in alert:
                     self.new_msg_acts(msg, False)
                 return
-        
+
         if not len(message.content):
             return
         self.new_msg_acts(message)
@@ -193,15 +193,15 @@ class DiscordBot(discord.Client):
             if channel is None:
                 print("channel not found:", ch)
                 continue
-            
+
             if len(self.chn_hist[ch]):
                 msg_last = self.chn_hist[ch].iloc[-1]
-                date_After = datetime.strptime(msg_last.Date, self.time_strf) 
+                date_After = datetime.strptime(msg_last.Date, self.time_strf)
                 iterator = channel.history(after=date_After, oldest_first=True)
             else:
                 # iterator = channel.history(oldest_first=True)
                 continue
-                
+
             print("In", channel)
             async for message in iterator:
                 message = server_formatting(message)
@@ -216,13 +216,13 @@ class DiscordBot(discord.Client):
                     self.new_msg_acts(message)
                 # if custom:
                 #     await msg_custom_formated2(message)
-        print("Done")        
+        print("Done")
         self.tracker.close_expired()
 
     def new_msg_acts(self, message, from_disc=True):
         if from_disc:
             msg_date = message.created_at.replace(tzinfo=timezone.utc).astimezone(tz=None)
-            msg_date_f = msg_date.strftime(self.time_strf)    
+            msg_date_f = msg_date.strftime(self.time_strf)
             if message.channel.id in self.channel_IDS.values():
                 chn_ix = list(self.channel_IDS.values()).index(message.channel.id)
                 chn = list(self.channel_IDS.keys())[chn_ix]
@@ -230,7 +230,7 @@ class DiscordBot(discord.Client):
                 chn = None
             msg = pd.Series({'AuthorID': message.author.id,
                             'Author': f"{message.author.name}#{message.author.discriminator}".replace("#0", ""),
-                            'Date': msg_date_f, 
+                            'Date': msg_date_f,
                             'Content': message.content,
                             'Channel': chn
                             })
@@ -268,7 +268,7 @@ class DiscordBot(discord.Client):
                         self.chn_hist[chn] = pd.concat([self.chn_hist[chn], msg.to_frame().transpose()],axis=0, ignore_index=True)
                         self.chn_hist[chn].to_csv(self.chn_hist_fname[chn], index=False)
                     return
-                    
+
                 dt = datetime.now().date()
                 order['dte'] =  (exp_dt - dt).days
                 if order['dte']<0:
@@ -310,7 +310,7 @@ class DiscordBot(discord.Client):
                             self.chn_hist[chn] = pd.concat([self.chn_hist[chn], msg.to_frame().transpose()],axis=0, ignore_index=True)
                             self.chn_hist[chn].to_csv(self.chn_hist_fname[chn], index=False)
                         return
-                
+
                 str_msg += f" Actual:{quote}, diff {round(act_diff*100)}%"
             self.queue_prints.put([f"\t {str_msg}", "green"])
             print(Fore.GREEN + f"\t {str_msg}")
@@ -323,23 +323,23 @@ class DiscordBot(discord.Client):
             if do_trade and date_diff.seconds < 120:
                 order["Trader"] = msg['Author']
                 self.trader.new_trade_alert(order, pars, msg['Content'])
-        
+
         if self.chn_hist.get(chn) is not None:
             msg['Parsed'] = pars
             self.chn_hist[chn] = pd.concat([self.chn_hist[chn], msg.to_frame().transpose()],axis=0, ignore_index=True)
             self.chn_hist[chn].to_csv(self.chn_hist_fname[chn], index=False)
-    
+
     def do_trade_alert(self, author, channel, order):
         "Decide if alert should be traded"
         if self.bksession is None or channel == "GUI_analysts":
             return False, order
-        
+
         # in authors subs list or channel subs list
         if author.lower() in split_strip(self.cfg['discord']['authors_subscribed']) or \
             channel.lower() in split_strip(self.cfg['discord']['channelwise_subscription']):
             # ignore if no STC
             if not self.cfg['general'].getboolean('DO_STC_TRADES') and order['action'] == "STC" \
-            and channel not in ["GUI_user", "GUI_both"]:        
+            and channel not in ["GUI_user", "GUI_both"]:
                 str_msg = f"STC not accepted by config options: DO_STC_TRADES = False"
                 print(Fore.GREEN + str_msg)
                 self.queue_prints.put([str_msg, "", "green"])
@@ -370,7 +370,7 @@ class DiscordBot(discord.Client):
             if len(self.cfg['shorting']['max_dte']):
                 if order['dte'] <= int(self.cfg['shorting']['max_dte']):
                     return True, order
-                
+
         return False, order
 
 if __name__ == '__main__':
