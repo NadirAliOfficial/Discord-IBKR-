@@ -6,7 +6,7 @@ from colorama import  init
 import queue
 
 from DiscordAlertsTrader.alerts_trader import AlertsTrader
-from DiscordAlertsTrader.configurator import cfg 
+from DiscordAlertsTrader.configurator import cfg
 from DiscordAlertsTrader.message_parser import parse_trade_alert
 from DiscordAlertsTrader.brokerages.TDA_api import TDA
 from DiscordAlertsTrader.brokerages.eTrade_api import eTrade
@@ -28,7 +28,7 @@ class TestAlertsTrader(unittest.TestCase):
             os.remove(self.trader_portfolio_fname)
         if os.path.exists(self.trader_log_fname):
             os.remove(self.trader_log_fname)
-        
+
         # make trade moves
         today = datetime.now().strftime("%m/%d")
         self.trades = [f"BTO 10 AAPL 100c {today} @ .5 PT 125%TS30% SL 50%",
@@ -41,21 +41,21 @@ class TestAlertsTrader(unittest.TestCase):
         """Test that the TDA order is sent correctly and trader works as expected"""
 
         self.prepare()
-        
+
         cfg['order_configs']['max_trade_capital'] = '1000'
         cfg['discord']['notify_alerts_to_discord'] = 'false'
         cfg['general']['DO_BTO_TRADES'] = 'true'
         cfg['order_configs']['max_trade_capital'] = '5000'
         cfg["order_configs"]["default_exits"] = ""
-        
-        trader = AlertsTrader(brokerage, 
+
+        trader = AlertsTrader(brokerage,
                             portfolio_fname=self.trader_portfolio_fname,
                             alerts_log_fname=self.trader_log_fname,
                             update_portfolio=False,
                             queue_prints=queue.Queue(maxsize=50),
                             cfg=cfg
                             )
-        
+
         ################################################################################
         # Buy alert
         buy_alert = self.trades[0]
@@ -73,14 +73,14 @@ class TestAlertsTrader(unittest.TestCase):
             'Asset': order['asset'],
             'Qty': order['Qty'],
             'exit_plan': {'PT1': order['PT1'], 'PT2': order['PT2'], 'PT3': order['PT3'], 'SL': order['SL']},
-            
+
             }
 
         # Create a message, order and pars
         order['Trader'] = 'test'
         order["Date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         # Generate return vals for the brokerage
-        brokerage.get_quotes.return_value = {expected['Symbol']: {'askPrice': expected['Price']}} 
+        brokerage.get_quotes.return_value = {expected['Symbol']: {'askPrice': expected['Price']}}
         brokerage.send_order.return_value = ["WORKING",expected["ordID"]]
         brokerage.get_order_info.return_value = [
             "WORKING",
@@ -90,13 +90,13 @@ class TestAlertsTrader(unittest.TestCase):
              'status': "WORKING",
              'orderLegCollection':[
                 {'instrument': {'symbol': expected['Symbol']},
-                 'instruction': "BUY"},  
+                 'instruction': "BUY"},
             ]}]
         ################################################################################
         # Buy alert working
         trader.new_trade_alert(order, pars, buy_alert)
-        trader.portfolio.loc[0, 'exit_plan']        
-        self.assertEqual(eval(trader.portfolio.loc[0, 'exit_plan']), expected['exit_plan']) 
+        trader.portfolio.loc[0, 'exit_plan']
+        self.assertEqual(eval(trader.portfolio.loc[0, 'exit_plan']), expected['exit_plan'])
 
         ################################################################################
         # Buy alert filled, send exit orders
@@ -108,7 +108,7 @@ class TestAlertsTrader(unittest.TestCase):
             'status': "FILLED",
             'orderLegCollection':[
             {'instrument': {'symbol': expected['Symbol']},
-                'instruction': "BUY"},  
+                'instruction': "BUY"},
         ]}], # for BTO
         ["WAITING",
         {'quantity': expected["Qty"],
@@ -117,20 +117,20 @@ class TestAlertsTrader(unittest.TestCase):
             'status': "WAITING",
             'orderLegCollection':[
             {'instrument': {'symbol': expected['Symbol']},
-                'instruction': "BUY"},  
+                'instruction': "BUY"},
         ]}], # for SL
         ]
         brokerage.get_quotes.return_value = {expected['Symbol']: {'bidPrice': expected['Price']*1.05}}
         trader.update_orders()
-        
+
         ################################################################################
         # Update the exit orders, trigger PT SL
         exit_plan = eval(trader.portfolio.loc[0, 'exit_plan'])
         pt_target = eval(exit_plan['PT1'].split("TS")[0])
         ts_target = eval(exit_plan['PT1'].split("TS")[1])
         brokerage.get_quotes.return_value = {expected['Symbol']: {'bidPrice': pt_target}}
-        
-        brokerage.get_order_info.side_effect = [[ 
+
+        brokerage.get_order_info.side_effect = [[
             # for SL
             "WORKING",
             {'quantity': expected["Qty"],
@@ -139,11 +139,11 @@ class TestAlertsTrader(unittest.TestCase):
              'status': "WORKING",
              'orderLegCollection':[
                 {'instrument': {'symbol': expected['Symbol']},
-                 'instruction': "BUY"},  
+                 'instruction': "BUY"},
             ]}],
-            # [["WORKING"], {}], # for cancelling SL      
-            [ 
-            # for TS filled 
+            # [["WORKING"], {}], # for cancelling SL
+            [
+            # for TS filled
             "FILLED",
             {'quantity': expected["Qty"],
              "price": pt_target - ts_target,
@@ -152,10 +152,10 @@ class TestAlertsTrader(unittest.TestCase):
              'orderLegCollection':[
                 {'instrument': {'symbol': expected['Symbol']},
                 'quantity': expected["Qty"],
-                'instruction': "BUY"}  
+                'instruction': "BUY"}
             ]}],
-            [ 
-            # for log_filled_STC 
+            [
+            # for log_filled_STC
             "FILLED",
             {'quantity': expected["Qty"],
              "price": pt_target + ts_target,
