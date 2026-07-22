@@ -810,7 +810,7 @@ class BaseClient(ABC):
 
         return self._get_request(url=url_endpoint, params=params)
 
-    
+
     def stream_option_chain(self, ticker: str, expdate: str=None) -> Response | Awaitable[Response]:
         """Submit a list of orders.
 
@@ -831,9 +831,9 @@ class BaseClient(ABC):
         if expdate:
             data = {"expdate": expdate}
             return requests.request("GET", url_endpoint, json=data, headers=params, stream=True)
-        else:            
+        else:
             return requests.request("GET", url_endpoint, headers=params, stream=True)
-    
+
     ###################
     # Order Execution #
     ###################
