@@ -4,7 +4,7 @@ import os.path as op
 import pandas as pd
 import json
 
-def update_port_cols():   
+def update_port_cols():
     portfolio_newcols = {"Price-Current":"Price-actual", "PnL-Current":"PnL-actual", "$PnL-Current":"PnL$-actual","$PnL":"PnL$",
                         "Price-Alert":"Price-alert", "PnL-Alert":"PnL-alert", "$PnL-Alert":"PnL$-alert",'uQty':'Qty',
                         "STC1-Alerted":"STC1-alerted", "STC1-uQty":"STC1-Qty","STC1-Price-Alerted":"STC1-Price-alert",
@@ -14,32 +14,32 @@ def update_port_cols():
                         "STC3-Alerted":"STC3-alerted", "STC3-uQty":"STC3-Qty","STC3-Price-Alerted":"STC3-Price-alert",
                         "STC3-Price-Current":"STC3-Price-actual",
                         }
-    
+
     tracker_newcols = {'Amount':'Qty', "Price-current":"Price-actual", "Prices-current":"Prices-actual",
-                        "PnL-current":"PnL-actual", "PnL$-current":"PnL$-actual", 'STC-Amount':'STC-Qty', 
+                        "PnL-current":"PnL-actual", "PnL$-current":"PnL$-actual", 'STC-Amount':'STC-Qty',
                         'STC-Price-current':'STC-Price-actual', 'STC-Prices-current':'STC-Prices-actual',
                         'STC-PnL-current':'PnL-actual', 'STC-PnL$-current':'PnL$-actual', 'STC-PnL$':'PnL$',
                         'STC-PnL':'PnL'}
 
     if os.path.exists(cfg['portfolio_names']['portfolio_fname']):
-        trader = pd.read_csv(cfg['portfolio_names']['portfolio_fname'])    
+        trader = pd.read_csv(cfg['portfolio_names']['portfolio_fname'])
         trader = trader.rename(columns=portfolio_newcols)
         new_cols = ["open_trailingstop", "trader_qty", "BTO-avg-Status"]
         for col in new_cols:
             if col not in trader.columns:
-                trader[col] = None 
+                trader[col] = None
         for col in ["STC%d-%s"% (i, v) for v in
                     ["alerted", "Status", "Qty", "xQty", "Price", "Price-alert", "Price-actual", "PnL","Date", "ordID"]
                     for i in range(1,int(cfg['order_configs']['max_stc_orders'])+1)]:
             if col not in trader.columns:
                 trader[col] = None
         trader.to_csv(cfg['portfolio_names']['portfolio_fname'], index=False)
-        
+
     if os.path.exists(cfg['portfolio_names']['tracker_portfolio_name']):
         tracker = pd.read_csv(cfg['portfolio_names']['tracker_portfolio_name'])
         tracker = tracker.rename(columns=tracker_newcols)
         tracker.to_csv(cfg['portfolio_names']['tracker_portfolio_name'], index=False)
-    
+
 package_dir = os.path.abspath(os.path.dirname(__file__))
 
 config_path = package_dir + '/config.ini'
@@ -59,7 +59,7 @@ else:
     if len(missing_items):
         raise ValueError(f"config.ini is missing the following items: {missing_items}\nadd missing items to config.ini and re-run")
 
-                
+
 # load configuration file
 cfg = configparser.ConfigParser(interpolation=None)
 cfg.read(config_path, encoding='utf-8')
@@ -68,7 +68,7 @@ cfg['root']= {'dir': package_dir}
 # change data_dir if it is just a folder name
 data_dir = cfg['general']['data_dir']
 _, ext = os.path.splitext(data_dir)
-if ext == "":    
+if ext == "":
     cfg['general']['data_dir'] = os.path.join(package_dir, "..", data_dir)
     print("full data dir:", cfg['general']['data_dir'])
 
@@ -90,7 +90,7 @@ portfolio_cols = ",".join([
                     for i in range(1,int(cfg['order_configs']['max_stc_orders'])+1)])
 
 tracker_portfolio_cols = ",".join([
-                "Date", "Symbol", "Trader", 'Channel', "isOpen", "Asset", "Type", "Price", "Qty", "Price-actual", 
+                "Date", "Symbol", "Trader", 'Channel', "isOpen", "Asset", "Type", "Price", "Qty", "Price-actual",
                 "Prices", "Prices-actual", "Avged", "PnL", "PnL-actual","PnL$", "PnL$-actual"
                 ] + [ f"STC-{v}" for v in
                     ["Qty", "Price", "Price-actual", "Prices", "Prices-actual", "Date"]
