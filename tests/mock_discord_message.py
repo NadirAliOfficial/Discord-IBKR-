@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 import os
-from DiscordAlertsTrader.configurator import cfg 
+from DiscordAlertsTrader.configurator import cfg
 from DiscordAlertsTrader.port_sim import custom_msg_fromdict
 
 root_dir  =  os.path.abspath(os.path.dirname(__file__))
