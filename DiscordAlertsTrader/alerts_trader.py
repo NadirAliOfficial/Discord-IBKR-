@@ -108,10 +108,10 @@ class AlertsTrader():
                 str_msg = f"Error raised during port update, trying again later. Error: {ex}"
                 print(Back.RED + str_msg)
                 self.queue_prints.put([str_msg, "", "red"])
-            
+
             if time.time() - t0 < self.order_update_rate:
                 time.sleep(self.order_update_rate - (time.time() - t0))
-        
+
         str_msg = "Closed portfolio updater"
         print(Back.GREEN + str_msg)
         self.queue_prints.put([str_msg, "", "green"])
@@ -139,17 +139,17 @@ class AlertsTrader():
         from discord_webhook import DiscordWebhook
         if not self.send_alert_to_discord:
             return
-        
+
         if order_info['status'] not in ['FILLED', 'EXECUTED', 'INDIVIDUAL_FILLS']:
             print("order in notifier not filled")
             return
-        
-        if order_info.get('orderLegCollection') is None:            
+
+        if order_info.get('orderLegCollection') is None:
             if order_info['childOrderStrategies'][0]['status'] == "FILLED":
                 order_info = order_info['childOrderStrategies'][0]
             elif order_info['childOrderStrategies'][1]['status'] == "FILLED":
                 order_info = order_info['childOrderStrategies'][1]
-        
+
         if action is None:
             if order_info['orderLegCollection'][0]['instruction'] in ["BUY_TO_OPEN", "BUY", 'BUY_OPEN']:
                 action = "BTO"
@@ -162,16 +162,16 @@ class AlertsTrader():
 
         symbol = ordersymb_to_str(order_info['orderLegCollection'][0]['instrument']['symbol'])
         msg = f"{action} {int(order_info['filledQuantity'])} {symbol} @{order_info.get('price')}"
-        
+
         if len(self.cfg['discord']['webhook']):
             webhook = DiscordWebhook(
-                url=self.cfg['discord']['webhook'], 
-                username=self.cfg['discord']['webhook_name'], 
-                content=f'{msg.upper()}', 
+                url=self.cfg['discord']['webhook'],
+                username=self.cfg['discord']['webhook_name'],
+                content=f'{msg.upper()}',
                 rate_limit_retry=True)
             webhook.execute()
             print("webhook sent")
-        
+
 
     def price_now(self, symbol, price_type="BTO", pflag=0):
         "pflag: 0: return str, 1: return float"
@@ -211,7 +211,7 @@ class AlertsTrader():
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "red"])
                     return None, None, order, None
-                
+
                 if ord_resp is None:
                     raise("Something wrong with order response")
 
@@ -233,7 +233,7 @@ class AlertsTrader():
                 print(Back.RED + str_msg)
                 self.queue_prints.put([str_msg, "", "red"])
                 return "no", order, False
-            
+
             # check DTE
             if len(self.cfg['shorting']['max_dte']):
                 if order.get('dte') is None:
@@ -245,7 +245,7 @@ class AlertsTrader():
                     print(Back.RED + str_msg)
                     self.queue_prints.put([str_msg, "", "red"])
                     return "no", order, False
-            
+
             # check if above min price
             if len(self.cfg['shorting']['min_price']):
                 min_price = float(self.cfg['shorting']['min_price'])
@@ -254,46 +254,46 @@ class AlertsTrader():
                     print(Back.RED + str_msg)
                     self.queue_prints.put([str_msg, "", "red"])
                     return "no", order, False
-            
+
             # use current price as ask, bid or last, or alerted
             sto_price = cfg['shorting']['STO_price']
             check_price = True
             if sto_price == 'alert':
-                check_price = False            
+                check_price = False
             ptype = "BTO" if sto_price == "ask" else "last" if sto_price == "last" else "STO"
             if check_price:
                 order["price_actual"] = self.price_now(order['Symbol'], ptype, 1 )
             else:
                 order["price_actual"] = order['price']
             pdiff = round((order['price']-order["price_actual"])/order['price']*100,1)
-            
-            if self.cfg['shorting']['STO_trailingstop'] != "":                            
+
+            if self.cfg['shorting']['STO_trailingstop'] != "":
                 # if pdiff too large, trigger trailing only when price target
                 if pdiff > eval(self.cfg['shorting']['max_price_diff']):
-                    order['price_trigger'] = order["price_actual"]      
+                    order['price_trigger'] = order["price_actual"]
                     str_msg = f"STO alert price diff too high: {pdiff}% at {order['price_actual']}, trailing will trigger at {order['price']}"
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
-                trail = (float(self.cfg['shorting']['STO_trailingstop'])/100)*order["price_actual"]  
+                trail = (float(self.cfg['shorting']['STO_trailingstop'])/100)*order["price_actual"]
                 order["trail_stop_const"] = -round(trail / 0.01) * 0.01
-            
+
             else:
                 # if price diff not too high, use current price
                 if pdiff < eval(self.cfg['shorting']['max_price_diff']):
                     if check_price:
                         order['price'] = self.price_now(order['Symbol'], ptype, 1 )
-                    else:   
+                    else:
                         order['price'] = order['price_actual']
                 else:
                     str_msg = f"STO alert price diff too high: {pdiff}% at {order['price_actual']}, keeping original price of {order['price']}"
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
-            
-            # Handle quantity  
+
+            # Handle quantity
             if order.get("Qty") is not None and not self.cfg['shorting'].getboolean('ignore_alert_qty'):
                 order['trader_qty'] = order['Qty']
             elif self.cfg['shorting']['default_sto_qty'] == "buy_one":
-                order['Qty'] = 1                    
+                order['Qty'] = 1
             elif self.cfg['shorting']['default_sto_qty'] == "margin_capital":
                 order['Qty'] = max(1, int(eval(self.cfg['shorting']['margin_capital'])/(20*strike)))
 
@@ -319,7 +319,7 @@ class AlertsTrader():
             return "yes", order, False
         # decide if do BTC based on alert
         elif order['action'] == "BTC":
-            
+
             return "yes", order, False
         else:
             return "no", order, False
@@ -337,7 +337,7 @@ class AlertsTrader():
                 ix_a += 1
             else:
                 # If symbol not found, quote val returned is -1
-                actual_price = price_now(symb, act, 1 )            
+                actual_price = price_now(symb, act, 1 )
             if actual_price == -1:
                 return "no", order, False
 
@@ -348,7 +348,7 @@ class AlertsTrader():
             question = f"{pars_ori} currently @ {actual_price}"
             if order['action'] in ["STO", "BTC"]:
                 return self.short_orders(order, pars)
-            
+
             elif self.cfg['order_configs'].getboolean('sell_current_price'):
                 if pdiff < eval(self.cfg['order_configs']['max_price_diff'])[order["asset"]]:
                     order['price'] = actual_price
@@ -358,9 +358,9 @@ class AlertsTrader():
                             new_price =  round(order['price']*1.05,2)
                         elif order['action'] == "STC":
                             new_price =  round(order['price']*.95,2)
-                    
+
                     order['price'] = self.round_price(new_price, order)
-                    
+
                     pars = self.order_to_pars(order)
                     question += f"\n new price: {pars}"
                 else:
@@ -375,7 +375,7 @@ class AlertsTrader():
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
                     return "no", order, False
-                
+
                 elif order['action'] == "BTO":
                     if len(cfg['order_configs']['exclude_tickers']):
                         no_trade = cfg['order_configs']['exclude_tickers'].split(',')
@@ -385,7 +385,7 @@ class AlertsTrader():
                             print(Back.GREEN + str_msg)
                             self.queue_prints.put([str_msg, "", "green"])
                             return "no", order, False
-                    
+
                     price = order['price']
                     if price == 0:
                         str_msg = f"Order not accepted price is 0"
@@ -394,16 +394,16 @@ class AlertsTrader():
                         return "no", order, False
                     price = price*100 if order["asset"] == "option" else price
                     max_trade_val = float(self.cfg['order_configs']['max_trade_capital'])
-                    
+
                     if 'Qty' not in order.keys() or order['Qty'] is None:
                         if self.cfg['order_configs']['default_bto_qty'] == "buy_one":
-                            order['Qty'] = 1                    
+                            order['Qty'] = 1
                         elif self.cfg['order_configs']['default_bto_qty'] == "trade_capital":
                             order['Qty'] =  int(max(round(float(self.cfg['order_configs']['trade_capital'])/price), 1))
                     # elif self.cfg['order_configs']['default_bto_qty'] == "trade_capital":
                     #     order['Qty'] =  int(max(round(float(self.cfg['order_configs']['trade_capital'])/price), 1))
-                    
-                    
+
+
                     if price * order['Qty'] > max_trade_val:
                         Qty_ori = order['Qty']
                         order['Qty'] =  int(max(max_trade_val//price, 1))
@@ -419,7 +419,7 @@ class AlertsTrader():
                             return "no", order, False
                 return "yes", order, False
 
-            # Manual trade 
+            # Manual trade
             resp = input(Back.RED  + question + "\n Make trade? (y, n or (c)hange) \n").lower()
 
             if resp in [ "c", "change", "y", "yes"] and 'Qty' not in order.keys():
@@ -477,9 +477,9 @@ class AlertsTrader():
                 _ = self.bksession.cancel_order(order_id)
 
                 self.portfolio.loc[open_trade, f"STC{i}-Status"] = np.nan
-                self.portfolio.loc[open_trade, f"STC{i}-ordID"] = np.nan                
+                self.portfolio.loc[open_trade, f"STC{i}-ordID"] = np.nan
                 self.save_logs("port")
-                
+
             elif ord_stat in ["REJECTED", 'CANCELED','CANCEL_REQUESTED', 'EXPIRED']:
                 self.portfolio.loc[open_trade, f"STC{i}-Status"] = np.nan
                 self.portfolio.loc[open_trade, f"STC{i}-ordID"] = np.nan
@@ -521,13 +521,13 @@ class AlertsTrader():
                 self.close_open_exit_orders(open_trade)
                 self.portfolio.loc[open_trade, "isOpen"] = 0
                 self.save_logs("port")
-                
+
                 symb = self.portfolio.loc[open_trade, "Symbol"]
                 msg = f"Position marked as closed: {symb}"
                 print(Back.GREEN + msg)
-                self.queue_prints.put([msg, "", "green"])                
+                self.queue_prints.put([msg, "", "green"])
                 return
-            
+
             elif order.get('cancelavg'):
                 # cancel avg price
                 trade = self.portfolio.loc[open_trade]
@@ -537,15 +537,15 @@ class AlertsTrader():
                     else:
                         ordID = trade['ordID']
                     order_status = self.bksession.cancel_order(ordID)
-                    order_status = order_status.replace("UROUT", "CANCELED")                    
+                    order_status = order_status.replace("UROUT", "CANCELED")
                     self.portfolio.loc[i, "BTO-avg-Status"] = order_status
-                    
+
                     symb = self.portfolio.loc[open_trade, "Symbol"]
                     msg = f"Cancelled avg order for {symb}"
                     print(Back.GREEN + msg)
-                    self.queue_prints.put([msg, "", "green"])                
+                    self.queue_prints.put([msg, "", "green"])
                 return
-            
+
             # Pause updater to avoid overlapping
             self.update_paused = True
 
@@ -583,14 +583,14 @@ class AlertsTrader():
             else:
                 # Cancel orders previous plan if any
                 self.close_open_exit_orders(open_trade)
-                
+
             renew_plan = eval(old_plan)
             if renew_plan is not None or renew_plan != {}:
                 for k in new_plan.keys():
                     renew_plan[k] = new_plan[k]
             else:
                 renew_plan = new_plan
-                
+
             self.portfolio.loc[open_trade, "exit_plan"] = str(renew_plan)
             self.update_paused = False
 
@@ -605,7 +605,7 @@ class AlertsTrader():
         elif order["action"] in ["BTO", "STO"] and not isOpen:
             alert_price = order["price"]
             action = order["action"]
-            
+
             # Get exit plan and add default vals if needed
             exit_plan = parse_exit_plan(order)
             if action == "BTO":
@@ -613,20 +613,20 @@ class AlertsTrader():
                     exit_plan.get("PT1") is None and exit_plan.get("SL") is None:
                     exit_plan = eval(self.cfg["order_configs"]["default_exits"])
             # Do BTO TrailingStop
-            if order.get('open_trailingstop'): 
+            if order.get('open_trailingstop'):
                 # get TS value, convet from percentage if needed
-                ts = order.get('open_trailingstop').replace("invTSbuy ", "").replace("TSbuy ", "")                
+                ts = order.get('open_trailingstop').replace("invTSbuy ", "").replace("TSbuy ", "")
                 if isinstance(ts, str) and "%" in ts:
                     pricenow = self.price_now(order['Symbol'], 'BTO', 1 )
                     ts = round((float(ts.split("%")[0])/100)*pricenow,2)
                 elif isinstance(ts, str):
-                    ts = eval(ts) 
+                    ts = eval(ts)
                     if ts/order['price']>10 :  # must be error, diff too big, make it %
-                        str_msg = f"Trailing stop too high ({ts/order['price']} diff), must be in %, converted to {ts/100}%" 
+                        str_msg = f"Trailing stop too high ({ts/order['price']} diff), must be in %, converted to {ts/100}%"
                         print(Back.RED + str_msg)
                         self.queue_prints.put([str_msg, "", "red"])
                         pricenow = self.price_now(order['Symbol'], 'BTO', 1 )
-                        ts = round((ts/100)*pricenow,2) 
+                        ts = round((ts/100)*pricenow,2)
 
                 ts_order = order.get('open_trailingstop')
                 if ts_order.startswith("invTSbuy"):
@@ -646,7 +646,7 @@ class AlertsTrader():
                                 "open_trailingstop": f"ts:{ts},max_price:{pricenow}",
                                 "trader_qty": order.get('Qty', 1),
                                 }
-                    self.portfolio = pd.concat([self.portfolio, pd.DataFrame.from_records(new_trade, index=[0])], ignore_index=True)                    
+                    self.portfolio = pd.concat([self.portfolio, pd.DataFrame.from_records(new_trade, index=[0])], ignore_index=True)
                     str_msg = f"{action} {order['Symbol']} created inverse TS local order @{pricenow}, TSconst {ts}, stp @{pricenow-ts}"
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
@@ -655,13 +655,13 @@ class AlertsTrader():
                 else:
                     order["trail_stop_const"] = round(ts / 0.01) * 0.01
                     order_response, order_id, order, _ = self.confirm_and_send(order, pars, self.bksession.make_STC_SL_trailstop)
-                
+
             else:
                 order_response, order_id, order, _ = self.confirm_and_send(order, pars, self.bksession.make_BTO_lim_order)
-    
+
             self.save_logs("port")
             if order_response is None:  #Assume trade not accepted
-                log_alert['action'] = action+"-notAccepted"                
+                log_alert['action'] = action+"-notAccepted"
                 self.alerts_log = pd.concat([self.alerts_log, pd.DataFrame.from_records(log_alert, index=[0])], ignore_index=True)
                 self.save_logs(["alert"])
                 str_msg = action+" not accepted by user, order response is none"
@@ -670,14 +670,14 @@ class AlertsTrader():
                 return
 
             order_status, order_info = self.get_order_info(order_id)
-            if order_status == 'REJECTED':                
+            if order_status == 'REJECTED':
                 log_alert['action'] = "REJECTED"
                 self.alerts_log = pd.concat([self.alerts_log, pd.DataFrame.from_records(log_alert, index=[0])], ignore_index=True)
                 self.save_logs(["alert"])
                 print(Back.GREEN + action+" REJECTED")
                 self.queue_prints.put([action+" REJECTED", "", "green"])
                 return
-            
+
             if order['action'] == "STO":
                 price = order_info.get("price")
                 if price is None:
@@ -702,7 +702,7 @@ class AlertsTrader():
                          }
 
             self.portfolio = pd.concat([self.portfolio, pd.DataFrame.from_records(new_trade, index=[0])], ignore_index=True)
-            
+
             if order_status in ["FILLED", "EXECUTED"]:
                 ot, _ = find_last_trade(order, self.portfolio)
                 self.portfolio.loc[ot, "Price"] = order_info['price']
@@ -715,14 +715,14 @@ class AlertsTrader():
                     if len(self.cfg['shorting']['BTC_SL']) and exit_plan.get("SL") is None:
                         exit_plan['SL'] = round(price * (1 + float(self.cfg['shorting']['BTC_SL'])/100),2)
                     self.portfolio.loc[ot,"exit_plan"]= str(exit_plan)
-                
+
                 # convert % to val exit plan
                 self.exit_percent_to_price(ot)
-                
+
             str_msg = f"{action} {order['Symbol']} sent @ {order_info.get('price')}. Status: {order_status}"
             print(Back.GREEN + str_msg)
             self.queue_prints.put([str_msg, "", "green"])
-            
+
             #Log portfolio, trades_log
             log_alert['action'] = action
             log_alert["portfolio_idx"] = len(self.portfolio) - 1
@@ -748,7 +748,7 @@ class AlertsTrader():
             self.portfolio.loc[open_trade,'BTO-avg-Status'] = order_status
             # if np.integer or int, turn to str
             if isinstance(self.portfolio.loc[open_trade,"ordID"], np.integer):
-                self.portfolio.loc[open_trade,"ordID"] = str(self.portfolio.loc[open_trade,"ordID"])                
+                self.portfolio.loc[open_trade,"ordID"] = str(self.portfolio.loc[open_trade,"ordID"])
             self.portfolio.loc[open_trade,"ordID"] += f',{order_id}'
 
             if pd.isnull(self.portfolio.loc[open_trade, "Avged"]):
@@ -783,7 +783,7 @@ class AlertsTrader():
 
             if self.portfolio.loc[open_trade, "filledQty"] > self.portfolio.loc[open_trade, "Qty"]:
                 raise ValueError(f"Filled qty {self.portfolio.loc[open_trade, 'filledQty']} larger than Qty {self.portfolio.loc[open_trade, 'Qty']}")
-            
+
             #Log portfolio, trades_log
             log_alert['action'] = "BTO-avg"
             log_alert["portfolio_idx"] = len(self.portfolio) - 1
@@ -850,7 +850,7 @@ class AlertsTrader():
                 STC = f"STC{i}"
                 # If not alerted, mark it
                 if pd.isnull(position[f"{STC}-alerted"]):
-                    self.portfolio.loc[open_trade, f"{STC}-alerted"] = 1 
+                    self.portfolio.loc[open_trade, f"{STC}-alerted"] = 1
                     self.portfolio.loc[open_trade, STC + "-Price-alert"] = order["price"]
                     # If alerted and already sold
                     if not pd.isnull(position[ f"{STC}-Price"]):
@@ -912,7 +912,7 @@ class AlertsTrader():
                 log_alert["portfolio_idx"] = open_trade
                 self.save_logs()
                 return
-            
+
             # Set STC as exit plan, not bought yet
             elif qty_bought == 0:
                 exit_plan = eval(self.portfolio.loc[open_trade, "exit_plan"])
@@ -947,7 +947,7 @@ class AlertsTrader():
                     print(f"Selling all, max supported STC is {self.max_stc_orders}")
                     self.queue_prints.put(["Selling all, max supported STC is 3", "", "green"])
                 elif order['xQty'] == 1:
-                    print("Selling all, got xQTY =1, check if not true")              
+                    print("Selling all, got xQTY =1, check if not true")
                 qty_sold = np.nansum([position[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])
                 position = self.portfolio.iloc[open_trade]
                 order['Qty'] = int(position["Qty"]) - qty_sold
@@ -969,7 +969,7 @@ class AlertsTrader():
             self.portfolio.loc[open_trade, "exit_plan"] = str({"PT1": None, "PT2": None, "PT3": None, "SL": None})
 
             order_response, order_id, order, _ = self.confirm_and_send(order, pars, self.bksession.make_STC_lim)
-            
+
             log_alert["portfolio_idx"] = open_trade
 
             if order_response is None:  # Assume trade rejected by user
@@ -1006,7 +1006,7 @@ class AlertsTrader():
         order_status, order_info = self.get_order_info(order_id)
         if order_info.get('orderLegCollection'):
             sold_unts = order_info['orderLegCollection'][0]['quantity']
-        else: 
+        else:
             if order_info['childOrderStrategies'][0]['status'] == "FILLED":
                 order_info = order_info['childOrderStrategies'][0]
             elif order_info['childOrderStrategies'][1]['status'] == "FILLED":
@@ -1017,11 +1017,11 @@ class AlertsTrader():
             stc_price = order_info['price']
         elif 'stopPrice' in order_info.keys():
             stc_price = order_info['stopPrice']
-        
+
         bto_price = self.portfolio.loc[open_trade, "Price"]
         bto_price_alert = self.portfolio.loc[open_trade, "Price-alert"]
         bto_price_actual = self.portfolio.loc[open_trade, "Price-actual"]
-        
+
         if self.portfolio.loc[open_trade, "Type"] == "BTO":
             stc_PnL = float((stc_price - bto_price)/bto_price) *100
         elif self.portfolio.loc[open_trade, "Type"] == "STO":
@@ -1043,7 +1043,7 @@ class AlertsTrader():
         sold_tot = np.nansum([trade[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])
         stc_PnL_all = np.nansum([trade[f"STC{i}-PnL"]*trade[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])/sold_tot
         self.portfolio.loc[open_trade, "PnL"] = stc_PnL_all
-    
+
         if self.portfolio.loc[open_trade, "Type"] == "BTO":
             stc_PnL_all_alert =  np.nansum([(float((trade[f"STC{i}-Price-alert"] - bto_price_alert)/bto_price_alert) *100) * trade[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])/sold_tot
             stc_PnL_all_curr = np.nansum([(float((trade[f"STC{i}-Price-actual"] - bto_price_actual)/bto_price_actual) *100) * trade[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])/sold_tot
@@ -1053,7 +1053,7 @@ class AlertsTrader():
 
         self.portfolio.loc[open_trade, "PnL-alert"] = stc_PnL_all_alert
         self.portfolio.loc[open_trade, "PnL-actual"] = stc_PnL_all_curr
-        
+
         mutipl = 1 if trade['Asset'] == "option" else .01  # pnl already in %
 
         self.portfolio.loc[open_trade, "PnL$"] =  stc_PnL_all* bto_price *mutipl*sold_tot
@@ -1080,7 +1080,7 @@ class AlertsTrader():
         trade = self.portfolio.loc[open_trade]
         if trade["BTO-Status"] not in ["FILLED", "EXECUTED"]:
             return
-        
+
         price = trade["Price"]
         exit_plan = eval(self.portfolio.loc[open_trade, "exit_plan"])
         exit_plan_o = exit_plan.copy()
@@ -1088,8 +1088,8 @@ class AlertsTrader():
         for exit in [f"PT{i}" for i in range(1,self.max_stc_orders)]:
             if exit_plan.get(exit) is None or not isinstance(exit_plan[exit], str)  or "%" not in exit_plan[exit]:
                 continue
-            
-            if "TS" in exit_plan[exit]: 
+
+            if "TS" in exit_plan[exit]:
                 pt,ts = exit_plan[exit].split("TS")
                 if "%" in pt:  # format val%TSval%
                     if trade["Type"] == "STO":
@@ -1105,7 +1105,7 @@ class AlertsTrader():
                 else: # format TSval
                     ts = float(ts)
                 exit_plan[exit] = f"{ptv}TS{ts}"
-            else: # format val%                
+            else: # format val%
                 if "%" in exit_plan[exit]:
                     if trade["Type"] == "STO":
                         ptv = round(price * (1 - float(exit_plan[exit].replace("%", ""))/100),2)
@@ -1114,7 +1114,7 @@ class AlertsTrader():
                 else:
                     ptv = float(exit_plan[exit])
                 exit_plan[exit] = ptv
-        
+
         sl = exit_plan["SL"]
         if sl is not None and isinstance(sl, str) and "%" in sl:
             if "TS" in sl:  # format TSval%
@@ -1125,9 +1125,9 @@ class AlertsTrader():
                     exit_plan["SL"] = round(price * (1 + float(sl.replace("%", ""))/100),2)
                 else:
                     exit_plan["SL"] = round(price * (1 - float(sl.replace("%", ""))/100),2)
-                
+
         self.portfolio.loc[open_trade, "exit_plan"] = str(exit_plan)
-        
+
         if exit_plan_o != exit_plan:
             str_msg = f"Updated exits for from % to value, from:{exit_plan_o}, to:{exit_plan}"
             print(Back.GREEN + str_msg)
@@ -1142,10 +1142,10 @@ class AlertsTrader():
 
             if trade["isOpen"] == 0:
                 continue
-            
+
             # check if inverse TSbuy stop has reached or update stop
             if trade["BTO-Status"] == "invTSbuy":
-                self.order_update_rate = 1       
+                self.order_update_rate = 1
                 ts_const, max_price = trade["open_trailingstop"].split(",")
                 max_price = eval(max_price.split(":")[1])
                 ts_const = eval(ts_const.split(":")[1])
@@ -1155,7 +1155,7 @@ class AlertsTrader():
                     continue
                 if quote_opt <= stp_price*1.01: # 1%
                     if pd.isna(trade['trader_qty']):
-                        qty = 1 
+                        qty = 1
                     else:
                         qty = int(trade['trader_qty'])
                     order = {"Symbol": trade['Symbol'],
@@ -1167,13 +1167,13 @@ class AlertsTrader():
                     order = self.round_order_price(order, trade)
                     pars = f"BTO {trade['trader_qty']} {trade['Symbol']} @{order['price']}"
                     order_response, order_id, order, _ = self.confirm_and_send(order, pars, self.bksession.make_BTO_lim_order)
-                    
-                    if order_response is None:  # trade not successful 
+
+                    if order_response is None:  # trade not successful
                         str_msg = "BTO after invTS did not go through, order response is none. Will try again next update. Trigger an STC to cancel it"
                         print(Back.GREEN + str_msg)
                         self.queue_prints.put([str_msg, "", "green"])
                         return
-                    order_status, order_info = self.get_order_info(order_id)                    
+                    order_status, order_info = self.get_order_info(order_id)
                     self.portfolio.loc[i, "Qty"] = order_info['quantity']
                     self.portfolio.loc[i, "filledQty"] = order_info['filledQuantity']
                     self.portfolio.loc[i, "BTO-Status"] = order_info['status']
@@ -1188,7 +1188,7 @@ class AlertsTrader():
                         self.portfolio.loc[i, "Price"] = stp_price
                 self.save_logs("port")
                 continue
-            
+
             if trade["BTO-Status"] not in ['FILLED', "CANCELED", "REJECTED"]:
                 # if str and has comma, take first
                 if isinstance(trade['ordID'], str):
@@ -1196,16 +1196,16 @@ class AlertsTrader():
                 else:
                     ordID = trade['ordID']
                 order_status, order_info = self.get_order_info(ordID)
-                
+
                 if order_status == "REJECTED":
                     self.portfolio.loc[i, "BTO-Status"] = order_status
                     self.portfolio.loc[i, 'isOpen'] = 0
-                    
+
                     str_msg = f"BTO {self.portfolio.loc[i, 'Symbol']} Status: {order_status}"
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
                     continue
-                    
+
                 # Check if number filled Qty changed
                 qty_fill = order_info['filledQuantity']
                 qty_fill_old = self.portfolio.loc[i, "filledQty"]
@@ -1213,7 +1213,7 @@ class AlertsTrader():
                 if not (pd.isnull(qty_fill_old) or qty_fill_old == 0) and \
                     qty_fill_old != qty_fill:
                     redo_orders = True
-                
+
                 if order_status in ["FILLED", "EXECUTED"]:
                     price = order_info.get("price")
                     self.portfolio.loc[i, "Price"] = price
@@ -1221,7 +1221,7 @@ class AlertsTrader():
                     str_msg = f"ENTERED {order_info['orderLegCollection'][0]['instrument']['symbol']} filled @ {price}. Status: {order_status}"
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
-                    
+
                     # Add default short exits, once filled and price is known
                     if self.portfolio.loc[i, "Type"] == "STO":
                         exit_plan = eval(self.portfolio.loc[i,"exit_plan"])
@@ -1230,13 +1230,13 @@ class AlertsTrader():
                         if len(self.cfg['shorting']['BTC_SL']) and exit_plan.get("SL") is None:
                             exit_plan['SL'] = round(price * (1 + float(self.cfg['shorting']['BTC_SL'])/100),2)
                         self.portfolio.loc[i,"exit_plan"]= str(exit_plan)
-                    
+
                     # Update exits from % to value
                     self.portfolio.loc[i, "BTO-Status"] = order_info['status']
                     self.exit_percent_to_price(i)
-                
+
                 self.portfolio.loc[i, "filledQty"] = order_info['filledQuantity']
-                
+
                 if order_status == 'REJECTED':
                     self.portfolio.loc[i, 'isOpen'] = 0
                     str_msg = f"BTO {order_info['orderLegCollection'][0]['instrument']['symbol']} Status: {order_status}"
@@ -1274,9 +1274,9 @@ class AlertsTrader():
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
                     continue
-                
+
                 if order_info['status'] in ["FILLED", "EXECUTED"]:
-                    
+
                     or_price = self.portfolio.loc[i,"Price"]*self.portfolio.loc[i, "filledQty"]
                     nw_price = order_info['price']*order_info['filledQuantity']
                     avg_price = round((or_price + nw_price)/(self.portfolio.loc[i, "filledQty"] + order_info['filledQuantity']),2)
@@ -1285,22 +1285,22 @@ class AlertsTrader():
                     self.portfolio.loc[i, "filledQty"] += order_info['filledQuantity']
                     self.disc_notifier(order_info)
                     self.close_open_exit_orders(i)
-                
+
                     self.portfolio.loc[i, "BTO-avg-Status"] = order_info['status']
-                    
+
                     redo_orders = True
                     trade = self.portfolio.iloc[i]
                     self.save_logs("port")
-                    
+
                     str_msg = f"BTO-avg {order_info['orderLegCollection'][0]['instrument']['symbol']} executed @ {order_info['price']}. Status: {order_status}"
                     print(Back.GREEN + str_msg)
                     self.queue_prints.put([str_msg, "", "green"])
                     self.disc_notifier(order_info)
-                    
+
                     # Update exits from % to value
                     self.exit_percent_to_price(i)
 
-            # For shorting positions if closing end of day           
+            # For shorting positions if closing end of day
             if trade['Type'] == 'STO' and self.cfg['shorting'].getboolean("BTC_EOD"):
                 time_now = datetime.now().time()
                 time_closed = datetime.strptime(self.cfg['general']["off_hours"].split(",")[0], "%H")
@@ -1309,13 +1309,13 @@ class AlertsTrader():
                 # Change exits before 15 min to close
                 if time_now >= time_quarter.time() and time_now < time_five.time() and \
                     len(self.cfg['shorting']['BTC_EOD_PT_SL']):
-                        exit_plan = eval(trade["exit_plan"])                        
+                        exit_plan = eval(trade["exit_plan"])
                         PT, SL = self.cfg['shorting']['BTC_EOD_PT_SL'].split(",")
                         SL, PT = eval(SL)/100, eval(PT)/100
-                        
+
                         if self.EOD.get(trade["Symbol"]) != "15min":
                             # Close and send lim order
-                            self.close_open_exit_orders(i) 
+                            self.close_open_exit_orders(i)
                             quote = self.price_now(trade["Symbol"], "BTC", 1)
                             # get the STC number to save PT
                             STC = f"STC{self.max_stc_orders-1}"
@@ -1325,7 +1325,7 @@ class AlertsTrader():
                                     break
                             exit_plan = {"PT1": None, "PT2": None,"PT3": None,"SL": round(quote + SL * quote, 2)}
                             exit_plan[f"PT{ith}"] = round(quote - PT * quote, 2)
-                            
+
                             self.portfolio.at[i,'exit_plan'] = str(exit_plan)
                             redo_orders = True
                             self.exit_percent_to_price(i)
@@ -1333,15 +1333,15 @@ class AlertsTrader():
                             print(Back.GREEN + str_msg)
                             self.queue_prints.put([str_msg, "", "green"])
                             self.EOD[trade["Symbol"]] = "15min"
-                    
+
                 # Close position 5 min to close
                 elif time_now >= time_five.time() and time_now < time_closed.time() \
                     and self.EOD.get(trade["Symbol"]) != "5min":
                     print(f'closing option {trade["Symbol"]} 5 min before EOD')
                     quote = self.price_now(trade["Symbol"], "BTC", 1)
-                    
+
                     # Close and send lim order
-                    self.close_open_exit_orders(i)       
+                    self.close_open_exit_orders(i)
                     order = {}
                     order['action'] = "BTC"
                     order['Symbol'] = trade["Symbol"]
@@ -1350,7 +1350,7 @@ class AlertsTrader():
                     order['price'] = quote
                     self.update_paused = True
                     _, order_id, order, _ = self.confirm_and_send(order, f'EOD {order["Symbol"]}', self.bksession.make_STC_lim)
-                    
+
                     # add order id
                     for ith in range(1,self.max_stc_orders):
                         STC = f"STC{ith}"
@@ -1366,7 +1366,7 @@ class AlertsTrader():
             self.exit_percent_to_price(i)
             trade = self.portfolio.iloc[i]
             exit_plan = eval(trade["exit_plan"])
-            if exit_plan != {}:                
+            if exit_plan != {}:
                 self.make_exit_orders(i, exit_plan)
                 self.exit_percent_to_price(i)
 
@@ -1410,12 +1410,12 @@ class AlertsTrader():
                     self.portfolio.loc[i, STC + "-Qty"] = order_info['filledQuantity']
                     self.log_filled_STC(STC_ordID, i, STC)
                     self.portfolio.loc[i, STC +"-xQty"] = np.nan
-                
+
                 self.portfolio.loc[i, STC+"-Status"] = order_status
                 trade = self.portfolio.iloc[i]
 
                 if order_status in ["FILLED", "EXECUTED"] and np.isnan(trade[STC+"-xQty"]):
-                    self.log_filled_STC(STC_ordID, i, STC)                    
+                    self.log_filled_STC(STC_ordID, i, STC)
                     self.disc_notifier(order_info)
 
         self.save_logs("port")
@@ -1452,7 +1452,7 @@ class AlertsTrader():
         # Go over exit plans and make orders
         order = {'Symbol': trade['Symbol']}
         for ii in range(1, nPTs+1):
-            STC = f"STC{ii}"           
+            STC = f"STC{ii}"
 
             if trade[STC+"-Status"] in ["FILLED", "EXECUTED"]:
                 continue
@@ -1476,20 +1476,20 @@ class AlertsTrader():
                         order = {'Symbol': trade['Symbol']}
                         if TS > 0:
                             ord_func = self.bksession.make_STC_SL_trailstop
-                            order = self.calculate_stoploss(order, trade, TS) 
+                            order = self.calculate_stoploss(order, trade, TS)
                         else:
                             ord_func = self.bksession.make_STC_lim
                             order["price"] = quote_opt
-                        order = self.round_order_price(order, trade)                                        
+                        order = self.round_order_price(order, trade)
                         order['Qty'] = int(trade['Qty'])
                         order['xQty'] = 1
                         order['action'] = trade["Type"].replace("BTO", "STC").replace("STO", "BTC")
-                        
+
                         _, STC_ordID = self.bksession.send_order(ord_func(**order))
                         if STC_ordID is None:
                             print('Sent order got None', order)
                             continue
-                        
+
                         if order.get("price"):
                             str_prt = f"{STC} {order['Symbol']} @{order['price']}(Qty:{order['Qty']}) sent during order update"
                         else:
@@ -1502,7 +1502,7 @@ class AlertsTrader():
                         trade = self.portfolio.iloc[i]
                         self.save_logs("port")
                         self.order_update_rate = 5
-                        
+
                 # Adjust if necessary Qty based on remaining shares
                 if nPTs > 1:
                     ord_stat, ord_inf = self.get_order_info(STC_ordID)
@@ -1539,7 +1539,7 @@ class AlertsTrader():
                     order['xQty'] = xQty[ii - 1]
                     order['action'] = trade["Type"].replace("STO", "BTC").replace("BTO", "STC")
                     if self.bksession.name not in ['tda', 'ts']:
-                        str_prt = f"WARNING: {self.bksession.name} does not support OCO orders. Only the PT will be sent without SL. For OCO pass a PT as a string with 0%TS (e.g. 50%TS0%) and SL."            
+                        str_prt = f"WARNING: {self.bksession.name} does not support OCO orders. Only the PT will be sent without SL. For OCO pass a PT as a string with 0%TS (e.g. 50%TS0%) and SL."
                         print(Back.RED + str_prt)
                         self.queue_prints.put([str_prt,"", "red"])
                 # Lim order
@@ -1558,7 +1558,7 @@ class AlertsTrader():
                     else:
                         ord_func =self.bksession.make_STC_SL
                         order["SL"] = exit_plan["SL"]
-                    
+
                     order['Qty'] = int(trade['Qty'])
                     order['xQty'] = 1
                     order['action'] = trade["Type"].replace("STO", "BTC").replace("BTO", "STC")
@@ -1594,13 +1594,13 @@ class AlertsTrader():
                 else:
                     break
         # no PTs but trailing stop
-        if nPTs == 0 and exit_plan["SL"] is not None and pd.isnull(trade["STC1-ordID"]): 
+        if nPTs == 0 and exit_plan["SL"] is not None and pd.isnull(trade["STC1-ordID"]):
             SL = exit_plan["SL"]
-            
+
             order['Qty'] = int(trade['Qty'])
             order['xQty'] = 1
             order['action'] = trade["Type"].replace("STO", "BTC").replace("BTO", "STC")
-            
+
             if isinstance(SL, str) and "TS" in SL:
                 ord_func = self.bksession.make_STC_SL_trailstop
                 order = self.calculate_stoploss(order, trade, exit_plan["SL"])
@@ -1610,13 +1610,13 @@ class AlertsTrader():
                 order["SL"] = exit_plan["SL"]
                 order = self.round_order_price(order, trade)
                 msg = f"SL of {exit_plan['SL']} constant % sent during order update"
-            
+
             try:
                 _, STC_ordID = self.bksession.send_order(ord_func(**order))
                 if STC_ordID is None:
                     print('Sent order got None', order)
                     return
-                str_prt = f"STC1 {order['Symbol']} {msg}"            
+                str_prt = f"STC1 {order['Symbol']} {msg}"
                 print(Back.GREEN + str_prt)
                 self.queue_prints.put([str_prt,"", "green"])
                 self.portfolio.loc[i, "STC1-ordID"] = STC_ordID
@@ -1642,7 +1642,7 @@ class AlertsTrader():
                 if pd.isnull(trade[f"STC{stci}-Qty"]):
                     STC = f"STC{stci}"
                     break
-                
+
             price = 0
             pnl = -100
             action = trade["Type"].replace("STO", "BTC").replace("BTO", "STC")
@@ -1661,11 +1661,11 @@ class AlertsTrader():
             self.portfolio.loc[open_trade, STC + "-Qty"] = trade['filledQty'] - usold
             self.portfolio.loc[open_trade, STC + "-PnL"] = pnl
             self.portfolio.loc[open_trade, "isOpen"] = 0
-            
+
             bto_price = self.portfolio.loc[open_trade, "Price"]
             bto_price_alert = self.portfolio.loc[open_trade, "Price-alert"]
             bto_price_actual = self.portfolio.loc[open_trade, "Price-actual"]
-            
+
             trade = self.portfolio.loc[open_trade]
             sold_tot = np.nansum([trade[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])
             stc_PnL_all = np.nansum([trade[f"STC{i}-PnL"]*trade[f"STC{i}-Qty"] for i in range(1,self.max_stc_orders)])/sold_tot
@@ -1679,21 +1679,21 @@ class AlertsTrader():
 
             self.portfolio.loc[open_trade, "PnL-alert"] = stc_PnL_all_alert
             self.portfolio.loc[open_trade, "PnL-actual"] = stc_PnL_all_curr
-            
+
             mutipl = 1 if trade['Asset'] == "option" else .01  # pnl already in %
             self.portfolio.loc[open_trade, "PnL$"] =  stc_PnL_all* bto_price *mutipl*sold_tot
             self.portfolio.loc[open_trade, "PnL$-alert"] =  stc_PnL_all_alert* bto_price_alert *mutipl*sold_tot
             self.portfolio.loc[open_trade, "PnL$-actual"] =  stc_PnL_all_curr* bto_price_actual *mutipl*sold_tot
-        
+
             str_prt = f"{trade['Symbol']} option expired -100% Qty: {trade['filledQty']}"
             print(Back.GREEN + str_prt)
             self.queue_prints.put([str_prt,"", "green"])
             self.save_logs("port")
 
     def calculate_stoploss(self, order, trade, SL:str):
-        "Calculate stop loss price with increment, SL: e.g. '40%" 
+        "Calculate stop loss price with increment, SL: e.g. '40%"
         if isinstance(SL, str):
-            if "%" in SL:       
+            if "%" in SL:
                 SL =  trade['Price']*float(SL.replace("%", ""))/100
             else:
                 SL = float(SL)
@@ -1707,9 +1707,9 @@ class AlertsTrader():
             if order.get(exit) is not None and isinstance(order.get(exit), (int, float)):
                 order[exit] = self.round_price(order.get(exit), trade)
         return order
-    
+
     def round_price(self, price, trade):
-        # Round SL price to nearest increment        
+        # Round SL price to nearest increment
         if self.bksession.name in ['tda']:
             if 'SPXW' in trade['Symbol']:
                 if price < 3.0:
@@ -1737,12 +1737,12 @@ class AlertsTrader():
                 increment = 0.10
         else:
             increment = 0.01
-    
+
         new_price = round(round(price / increment) * increment,2)
         if new_price == 0:
             new_price = increment
         return new_price
-    
+
 def option_date(opt_symbol):
     sym_inf = opt_symbol.split("_")[1]
     opt_date = re.split("C|P", sym_inf)[0]
@@ -1771,6 +1771,6 @@ def amnt_left(order, position):
 
 if __name__ == "__main__":
     from DiscordAlertsTrader.brokerages import get_brokerage
-    
+
     bksession = get_brokerage()
     at = AlertsTrader(bksession)
