@@ -45,14 +45,14 @@ class TDA(BaseBroker):
                                         order=new_order)
         order_id = order_response["order_id"]
         return order_response, order_id
-    
+
     def cancel_order(self, order_id):
         return self.session.cancel_order(self.accountId, int(order_id))
 
-    def get_order_info(self, order_id):  
+    def get_order_info(self, order_id):
         """
         order_status = 'REJECTED' | "FILLED" | "WORKING"
-        """      
+        """
         order_info = self.session.get_orders(account=self.accountId, order_id=int(order_id))
         if order_info['orderStrategyType'] == "OCO":
             order_status = [
@@ -62,12 +62,12 @@ class TDA(BaseBroker):
                 print(f"OCO order status are different in ordID {order_id}: ",
                       f"{order_status[0]} vs {order_status[1]}, will try to get the filled")
             # take the first one, if cancelled it will look for the filled later
-            order_status = order_status[0] 
+            order_status = order_status[0]
         elif order_info['orderStrategyType'] in ['SINGLE', 'TRIGGER']:
             order_status = order_info['status']
         else:
             raise TypeError("Not sure type order. Check")
-        
+
         # price might just be the set lim, but actual is in execution leg
 
         if "orderActivityCollection" in order_info.keys():
@@ -86,7 +86,7 @@ class TDA(BaseBroker):
 
     def get_order_status(self, order_id):
         pass
-    
+
     def get_account_info(self):
         acc_inf = self.session.get_accounts(self.accountId, ['orders','positions'])
         return acc_inf
@@ -265,7 +265,7 @@ class TDA(BaseBroker):
         new_order.stop_price_offset(trail_stop_const)
         new_order.stop_price_link_type('VALUE')
         new_order.stop_price_link_basis('BID')
-        
+
         child_order_leg = OrderLeg()
         child_order_leg.order_leg_quantity(quantity=Qty)
         if len(Symbol.split("_")) > 1:
@@ -293,7 +293,7 @@ class TDA(BaseBroker):
                 new_order.stop_price_link_basis('BID')
             elif action == "BTO":
                 child_order_leg.order_leg_instruction(instruction="BUY")
-                new_order.stop_price_link_basis('ASK')                      
+                new_order.stop_price_link_basis('ASK')
             child_order_leg.order_leg_asset(asset_type='EQUITY', symbol=Symbol)
         new_order.add_order_leg(order_leg=child_order_leg)
         return new_order
