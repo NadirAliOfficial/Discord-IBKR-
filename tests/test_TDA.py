@@ -66,8 +66,8 @@ class TestTDA(unittest.TestCase):
         self.tda.session.get_quotes.return_value = {'symbol': 'AAPL', 'price': 150}
         result = self.tda.get_quotes(symbol='AAPL')
         self.assertEqual(result, {'symbol': 'AAPL', 'price': 150})
-    
-    
+
+
     def test_get_positions_orders(self):
         # Mock TDClient.get_accounts method
         mock_get_accounts = MagicMock()
