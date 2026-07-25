@@ -100,14 +100,14 @@ def prosperitytrades_formatting(message_):
     # Don't do anything if not Xtrade message
     if message_.guild.id != 1204779568058335232:
         return message_
-    
+
     # Change bot to author
     if message_.author.name == 'vader-alerts':
         message = MessageCopy(message_)
         message.author.name = 'lordvader32'
         message.author.discriminator = '0'
         return message
-    
+
     return message_
 
 
@@ -178,14 +178,14 @@ def clutch_trades(message_):
             alert += mb.description
     if not len(alert):
         alert = message.content
-    
+
     if len(alert):
         pattern = r'(\d{1,2}\/\d{1,2})\s*([A-Z]+)\s(\d+[.\d+]*[c|p|C|P])\s*(\d+(?:[.]\d+)?|\.\d+)'
         match = re.search(pattern, alert, re.IGNORECASE)
         if match:
             expdate, ticker, strike, price = match.groups()
             # BTO always have SL
-            action = "BTO" 
+            action = "BTO"
             alert = f"{action} {ticker} {strike.upper()} {expdate} @{price}"
         message.content = alert
     return message
@@ -536,14 +536,14 @@ def bishop_formatting(message_):
     Reformat Discord message from bishop
     """
     message = MessageCopy(message_)
-    
+
     alert = ''
     for mb in message.embeds:
         if mb.description:
             alert += mb.description
     if not len(alert):
         alert = message.content
-    
+
     for mb in message.embeds:
         match = False
         if "I'm entering" in alert:
