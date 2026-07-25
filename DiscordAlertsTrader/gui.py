@@ -106,7 +106,7 @@ def get_live_quotes(symbol, tracker, max_delay=2):
             bid = ask
         bid = bid.strip().replace('\n', '')
         quote = [ask, bid]
-    except:
+    except Exception:
         print("Error reading quote", symbol, quotes[-1])
         get_live = True
 
@@ -216,7 +216,7 @@ els = els + ['_orders_', '_positions_'] if bksession is not None else els
 for el in els:
     try:
         fit_table_elms(window.Element(el).Widget)
-    except:
+    except Exception:
         pass
 
 for chn in chns:
